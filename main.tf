@@ -1,32 +1,32 @@
-provider:
-  aws:
-    region: us-east-1
+# main.tf
 
-resources:
-  - type: aws_iam_role
-    name: lambda_role
-    config:
-      name: lambda_execution_role
-      assume_role_policy: |
-        {
-          "Version": "2012-10-17",
-          "Statement": [
-            {
-              "Effect": "Allow",
-              "Principal": {
-                "Service": "lambda.amazonaws.com"
-              },
-              "Action": "sts:AssumeRole"
-            }
-          ]
-        }
+# Create SNS topic
+resource "aws_sns_topic" "my_topic" {
+  name = "my-topic"
+}
 
-  - type: aws_lambda_function
-    name: example_lambda
-    config:
-      function_name: example_lambda_function
-      handler: index.handler
-      runtime: nodejs14.x
-      role: ${aws_iam_role.lambda_role.arn}
-      # Define the Lambda function code here
-      # e.g., source_code_hash: ${filebase64("path/to/lambda_function.zip")}
+# Create Lambda function subscribed to SNS topic
+resource "aws_lambda_function" "my_function" {
+  function_name = "my-function"
+
+  s3_bucket = "my-bucket"
+  s3_key    = "my-function.zip"
+
+  handler = "index.handler"
+  runtime = "python3.7"
+
+  source_arn = aws_sns_topic.my_topic.arn
+}
+
+# Create DynamoDB table
+resource "aws_dynamodb_table" "my_table" {
+  name           = "my-table"
+  read_capacity  = 5
+  write_capacity = 5
+  hash_key       = "id"
+
+  attribute {
+    name = "id"
+    type = "S"
+  }
+}
