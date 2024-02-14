@@ -1,4 +1,4 @@
-name: Terraform 
+name: Deploy Infrastructure 
 
 on:
   push:
@@ -8,46 +8,28 @@ on:
 jobs:
 
   terraform:
-  
+
     runs-on: ubuntu-latest
-    fail-fast: false
-
+    
     steps:
-
-    - name: Checkout
+    
+    - name: Checkout code
       uses: actions/checkout@v2
-
+      
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v1
-    
-    - name: Run Terraform
-      continue-on-error: true
-      run: |
-        terraform init
-        terraform fmt -check || true
-        terraform plan
-        terraform apply -auto-approve
-        
-    - name: Check Exit Code  
-      if: ${{ failure() }}
-      run: exit 1
-        
-    - name: Upload Logs
-      uses: actions/upload-artifact@v2
-      with: 
-        name: logs
-        path: |
-          *.log
-          *.out
-          
-  logs-retention:
-
-    needs: terraform 
-    runs-on: ubuntu-latest
-
-    steps:
-    
-    - name: Set Retention Period
-      uses: actions/upload-artifact@v2
       with:
-        retention-days: 3
+        cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
+        
+    - name: Terraform Init
+      run: terraform init
+        
+    - name: Terraform Validate
+      run: terraform validate
+        
+    - name: Terraform Plan
+      run: terraform plan -out=tfplan
+
+    - name: Terraform Apply
+      if: github.ref == 'refs/heads/main'
+      run: terraform apply tfplan
