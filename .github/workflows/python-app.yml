@@ -1,31 +1,55 @@
-name: Deploy Infrastructure
+Resources:
+  SNSTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: my-topic
 
-on:
-  push:
-    branches:
-      - main
-      
-jobs:
+  LambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: my-function
+      Runtime: python3.7
+      Handler: index.handler
+      Code:
+        S3Bucket: my-bucket
+        S3Key: my-function.zip
+      Role: !GetAtt LambdaExecutionRole.Arn  #Assuming you have defined LambdaExecutionRole
+      Events:
+        MySNSTopic:
+          Type: SNS
+          Properties:
+            Topic: !Ref SNSTopic
 
-  terraform:
-  
-    runs-on: ubuntu-latest
-    
-    steps:
-    
-    - uses: actions/checkout@v2
-   
-    - uses: hashicorp/setup-terraform@v1
-    
-    - name: Terraform Init
-      run: terraform init
-    
-    - name: Terraform Validate
-      run: terraform validate
-    
-    - name: Terraform Plan
-      run: terraform plan -out=tfplan
-    
-    - name: Terraform Apply 
-      if: github.ref == 'refs/heads/main'  
-      run: terraform apply tfplan
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: LambdaSNSPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - sns:Publish
+                Resource: !Ref SNSTopic
+
+  DynamoDBTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: my-table
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
