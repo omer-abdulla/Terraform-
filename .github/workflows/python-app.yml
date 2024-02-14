@@ -1,4 +1,4 @@
-name: Terraform
+name: Terraform 
 
 on:
   push:
@@ -17,7 +17,7 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v2
 
-    - name: Setup Terraform  
+    - name: Setup Terraform
       uses: hashicorp/setup-terraform@v1
     
     - name: Run Terraform
@@ -28,14 +28,26 @@ jobs:
         terraform plan
         terraform apply -auto-approve
         
-    - name: Check Exit Code
+    - name: Check Exit Code  
       if: ${{ failure() }}
       run: exit 1
         
-    - name: Upload Logs 
+    - name: Upload Logs
       uses: actions/upload-artifact@v2
-      with:
+      with: 
         name: logs
         path: |
           *.log
           *.out
+          
+  logs-retention:
+
+    needs: terraform 
+    runs-on: ubuntu-latest
+
+    steps:
+    
+    - name: Set Retention Period
+      uses: actions/upload-artifact@v2
+      with:
+        retention-days: 3
