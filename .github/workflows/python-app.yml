@@ -1,29 +1,67 @@
 name: Terraform
 
-on:
+on: 
   push:
     branches:
-      - main
+      - main  
   pull_request:
 
 jobs:
+
   terraform:
+    name: Terraform
     runs-on: ubuntu-latest
+    environment: production
+
+    # Use Terraform GitHub Actions
     steps:
-    - uses: actions/checkout@v2
-    
+    - name: Checkout
+      uses: actions/checkout@v2
+
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v1
     
     - name: Terraform Init
       run: terraform init
-    
+
     - name: Terraform Format
       run: terraform fmt -check
     
     - name: Terraform Plan
-      run: terraform plan -out=tfplan
-    
+      run: terraform plan -out tfplan
+
     - name: Terraform Apply
-      if: github.ref == 'refs/heads/main' 
+      if: github.ref == 'refs/heads/main'
       run: terraform apply tfplan
+
+    # Print logs 
+    - name: Print logs
+      if: ${{ always() }} 
+      run: |
+        cat terraform.log
+        cat tfplan.out
+
+  # Upload logs even if terraform failed
+  upload-logs:
+    needs: terraform
+    runs-on: ubuntu-latest
+    steps:
+    
+    - name: Upload logs
+      uses: actions/upload-artifact@v2
+      with:
+        name: logs
+        path: |
+          *.log
+          *.out
+          
+  # Retain logs for 3 days          
+  retention: 
+    needs: upload-logs  
+    runs-on: ubuntu-latest  
+    steps:
+    
+    - name: Set retention  
+      uses: actions/upload-artifact@v2
+      with:
+        retention-days: 3
